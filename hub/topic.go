@@ -25,6 +25,7 @@ func (topic Topic) subscribe(callbackUrl string) {
 	topic.wg.Add(1)
 
 	go func() {
+		defer topic.wg.Done()
 		topic.subscribers = append(topic.subscribers, callbackUrl)
 	}()
 
