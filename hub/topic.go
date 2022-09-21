@@ -4,24 +4,25 @@ import (
 	"bytes"
 	"log"
 	"net/http"
+	"net/url"
 	"sync"
 )
 
 type Topic struct {
 	wg          *sync.WaitGroup
-	subscribers []string
+	subscribers []url.URL
 }
 
 func NewTopic() *Topic {
 	t := Topic{
 		wg:          new(sync.WaitGroup),
-		subscribers: []string{},
+		subscribers: []url.URL{},
 	}
 
 	return &t
 }
 
-func (topic Topic) subscribe(callbackUrl string) {
+func (topic Topic) subscribe(callbackUrl url.URL) {
 	topic.wg.Add(1)
 
 	go func() {
@@ -35,8 +36,8 @@ func (topic Topic) subscribe(callbackUrl string) {
 func (topic Topic) publish(data []byte) {
 	buffer := bytes.NewBuffer(data)
 
-	for _, url := range topic.subscribers {
-		_, err := http.Post(url, "application/json", buffer)
+	for _, cbUrl := range topic.subscribers {
+		_, err := http.Post(cbUrl.String(), "application/json", buffer)
 		if err != nil {
 			log.Print(err)
 		}
