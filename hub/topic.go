@@ -1,4 +1,4 @@
-package hub
+package main
 
 import (
 	"bytes"
@@ -9,33 +9,19 @@ import (
 )
 
 type Topic struct {
-	wg          *sync.WaitGroup
+	mu          sync.Mutex
 	subscribers []url.URL
 }
 
-func NewTopic() *Topic {
-	t := Topic{
-		wg:          new(sync.WaitGroup),
-		subscribers: []url.URL{},
-	}
-
-	return &t
+func (topic *Topic) subscribe(callbackUrl url.URL) {
+	topic.mu.Lock()
+	defer topic.mu.Unlock()
+	topic.subscribers = append(topic.subscribers, callbackUrl)
 }
 
-func (topic Topic) subscribe(callbackUrl url.URL) {
-	topic.wg.Add(1)
-
-	go func() {
-		defer topic.wg.Done()
-		topic.subscribers = append(topic.subscribers, callbackUrl)
-	}()
-
-	topic.wg.Wait()
-}
-
-func (topic Topic) publish(data []byte) {
+func (topic *Topic) publish(data []byte) {
 	buffer := bytes.NewBuffer(data)
-
+	
 	for _, cbUrl := range topic.subscribers {
 		_, err := http.Post(cbUrl.String(), "application/json", buffer)
 		if err != nil {

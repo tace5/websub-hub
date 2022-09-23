@@ -1,4 +1,4 @@
-package hub
+package main
 
 import (
 	"encoding/json"
@@ -18,8 +18,8 @@ func NewHub() *Hub {
 	return &h
 }
 
-func (hub Hub) createTopic(topicName string) {
-	hub.topics[topicName] = NewTopic()
+func (hub Hub) registerTopic(topic string) {
+	hub.topics[topic] = new(Topic)
 }
 
 func (hub Hub) subscriberAction(mode string, topic string, callback url.URL) {
@@ -43,7 +43,7 @@ func (hub Hub) validateSubscription(mode string, topic string, callback url.URL)
 	if mode != "subscribe" && mode != "unsubscribe" {
 		failureReason = "Mode must be set to either 'subscribe' or 'unsubscribe"
 	}
-	if _, topicExists := hub.topics[topic]; topicExists {
+	if _, topicExists := hub.topics[topic]; !topicExists {
 		failureReason = "The topic does not exist"
 	}
 	if mode == "unsubscribe" && contains(hub.topics[topic].subscribers, callback) {
@@ -60,9 +60,9 @@ func (hub Hub) validateSubscription(mode string, topic string, callback url.URL)
 func verifyIntent(mode string, topic string, callback url.URL) bool {
 	challenge := randomString(15)
 	params := callback.Query()
-	params.Add("mode", mode)
-	params.Add("topic", topic)
-	params.Add("challenge", challenge)
+	params.Add("hub.mode", mode)
+	params.Add("hub.topic", topic)
+	params.Add("hub.challenge", challenge)
 
 	callback.RawQuery = params.Encode()
 	resp, err := http.Get(callback.String())
@@ -72,6 +72,7 @@ func verifyIntent(mode string, topic string, callback url.URL) bool {
 	}
 
 	body, err := io.ReadAll(resp.Body)
+
 	if err != nil {
 		log.Print(err)
 	} else if resp.StatusCode == http.StatusOK && string(body) == challenge {
@@ -86,11 +87,11 @@ func (hub Hub) subscribe(topicName string, callbackURL url.URL) {
 	topic.subscribe(callbackURL)
 }
 
-func (hub Hub) publish(topicName string, msg string) {
+func (hub Hub) publish(topicName string, data string) {
 	topic := hub.topics[topicName]
 
-	data := map[string]string{"topic": topicName, "msg": msg}
-	jsonData, err := json.Marshal(data)
+	payload := map[string]string{"hub.topic": topicName, "data": data}
+	jsonData, err := json.Marshal(payload)
 
 	if err != nil {
 		log.Fatal(err)

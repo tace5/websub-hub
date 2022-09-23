@@ -1,14 +1,13 @@
-package hub
+package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"net/url"
 )
 
-const PORT = 3000
+const PORT = 8080
 
 type API struct {
 	hub Hub
@@ -22,7 +21,6 @@ func NewAPI(hub Hub) *API {
 
 func (api API) start() {
 	http.HandleFunc("/", api.handleSubscriberAction)
-	http.HandleFunc("/topics/new", api.handleCreateTopic)
 	http.HandleFunc("/publish", api.handlePublish)
 
 	err := http.ListenAndServe(fmt.Sprintf(":%d", PORT), nil)
@@ -36,16 +34,9 @@ func (api API) handleSubscriberAction(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "Only the POST method is supported")
 	}
 
-	var body map[string]string
-	err := json.NewDecoder(r.Body).Decode(&body)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	mode := body["mode"]
-	topic := body["topic"]
-	callbackUrl, err := url.Parse(body["callback"])
+	mode := r.FormValue("hub.mode")
+	topic := r.FormValue("hub.topic")
+	callbackUrl, err := url.Parse(r.FormValue("hub.callback"))
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -59,17 +50,8 @@ func (api API) handlePublish(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "Only the POST method is supported")
 	}
 
-	var body map[string]string
-	err := json.NewDecoder(r.Body).Decode(&body)
-	if err != nil {
-		log.Fatal(err)
-	}
+	topic := r.FormValue("hub.topic")
+	data := r.FormValue("data")
 
-	api.hub.publish(body["topic"], body["msg"])
-}
-
-func (api API) handleCreateTopic(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "POST" {
-		fmt.Fprintf(w, "Only the POST method is supported")
-	}
+	api.hub.publish(topic, data)
 }

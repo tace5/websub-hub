@@ -1,7 +1,8 @@
-package hub
+package main
 
 func main() {
-	hub := *NewHub()
-	api := NewAPI(hub)
+	hub := NewHub()
+	hub.registerTopic("/a/topic")
+	api := NewAPI(*hub)
 	api.start()
 }
