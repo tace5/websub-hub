@@ -7,26 +7,31 @@ import (
 	"net/url"
 )
 
-const PORT = 8080
+// Port The port to serve content to
+const Port = 8080
 
+// API The type that represents the http endpoints used to interact with the hub
 type API struct {
 	hub Hub
 }
 
+// NewAPI Factory function for the API type
 func NewAPI(hub Hub) *API {
 	return &API{hub: hub}
 }
 
+// Starts the http server
 func (api API) start() {
 	http.HandleFunc("/", api.handleSubscriberAction)
 	http.HandleFunc("/notify", api.handleNotifySubscribers)
 
-	err := http.ListenAndServe(fmt.Sprintf(":%d", PORT), nil)
+	err := http.ListenAndServe(fmt.Sprintf(":%d", Port), nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
+// Handler for when a subscribe/unsubscribe request comes in
 func (api API) handleSubscriberAction(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		fmt.Fprintf(w, "Only the POST method is supported")
@@ -44,6 +49,7 @@ func (api API) handleSubscriberAction(w http.ResponseWriter, r *http.Request) {
 	api.hub.subscriberAction(mode, topic, *callbackUrl, secret)
 }
 
+// Handler for when a publisher wants to notify subscribers of updates to a topic
 func (api API) handleNotifySubscribers(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		fmt.Fprintf(w, "Only the POST method is supported")
