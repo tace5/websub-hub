@@ -13,24 +13,26 @@ import (
 	"net/url"
 )
 
-const hubURL = "http://hub:8080"
-
+// Hub The type that represents the hub itself
 type Hub struct {
 	topics map[string]*Topic
 	client http.Client
 }
 
+// NewHub Factory function for the hub
 func NewHub() *Hub {
 	h := Hub{topics: map[string]*Topic{}}
 
 	return &h
 }
 
+// Registers a new topic
 func (hub Hub) registerTopic(topicName string) {
 	hub.topics[topicName] = NewTopic()
 	print(hub.topics[topicName].subscribers)
 }
 
+// Subscribes or unsubscribes a subscriber from a topic (Includes validation and verification of intent)
 func (hub Hub) subscriberAction(mode string, topicName string, callback url.URL, secret string) {
 	if !hub.validateSubscription(mode, topicName) {
 		return
@@ -46,6 +48,7 @@ func (hub Hub) subscriberAction(mode string, topicName string, callback url.URL,
 	}
 }
 
+// Validates a subscription request
 func (hub Hub) validateSubscription(mode string, topicName string) bool {
 	failureReason := ""
 
@@ -63,6 +66,7 @@ func (hub Hub) validateSubscription(mode string, topicName string) bool {
 	return true
 }
 
+// Verifies the intent of a subscriber by sending a get request with the mode, topic and a challenge string
 func verifyIntent(mode string, topic string, callback url.URL) bool {
 	challenge := randomString(15)
 	params := callback.Query()
@@ -88,16 +92,19 @@ func verifyIntent(mode string, topic string, callback url.URL) bool {
 	return false
 }
 
+// Subscribes a subscriber to a topic
 func (hub Hub) subscribe(topicName string, callback url.URL, secret string) {
 	topic := hub.topics[topicName]
 	topic.subscribe(callback, secret)
 }
 
+// Unsubscribes a subscriber to a topic
 func (hub Hub) unsubscribe(topicName string, callback url.URL) {
 	topic := hub.topics[topicName]
 	topic.unsubscribe(callback)
 }
 
+// Notifies all subscribers of a topic
 func (hub Hub) notifySubscribers(topicName string, data string) {
 	topic := hub.topics[topicName]
 	payload := map[string]string{"hub.topic": topicName, "data": data}
@@ -112,6 +119,7 @@ func (hub Hub) notifySubscribers(topicName string, data string) {
 	}
 }
 
+// Notifies a subscriber about changes to a topic
 func (hub Hub) notifySubscriber(callback url.URL, secret string, data []byte, topicName string) {
 	hash := hmac.New(sha512.New, []byte(secret))
 	hash.Write(data)
@@ -123,7 +131,7 @@ func (hub Hub) notifySubscriber(callback url.URL, secret string, data []byte, to
 		log.Panic(err)
 	}
 	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("Link", fmt.Sprintf("%s; rel=hub, %s; rel=self", hubURL, topicName))
+	req.Header.Add("Link", fmt.Sprintf("http://hub:8080; rel=hub, %s; rel=self", topicName))
 	req.Header.Add("X-Hub-Signature", "sha512="+signature)
 
 	resp, err := hub.client.Do(req)
