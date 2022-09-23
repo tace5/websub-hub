@@ -85,7 +85,7 @@ func (hub Hub) subscribe(topicName string, callback url.URL, secret string) {
 	topic.subscribe(callback, secret)
 }
 
-func (hub Hub) publish(topicName string, data string) {
+func (hub Hub) notifySubscribers(topicName string, data string) {
 	topic := hub.topics[topicName]
 
 	payload := map[string]string{"hub.topic": topicName, "data": data}
@@ -95,5 +95,5 @@ func (hub Hub) publish(topicName string, data string) {
 		log.Fatal(err)
 	}
 
-	topic.publish(jsonData)
+	topic.notifySubscribers(jsonData)
 }

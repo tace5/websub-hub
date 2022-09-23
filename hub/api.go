@@ -19,7 +19,7 @@ func NewAPI(hub Hub) *API {
 
 func (api API) start() {
 	http.HandleFunc("/", api.handleSubscriberAction)
-	http.HandleFunc("/publish", api.handlePublish)
+	http.HandleFunc("/notify", api.handleNotifySubscribers)
 
 	err := http.ListenAndServe(fmt.Sprintf(":%d", PORT), nil)
 	if err != nil {
@@ -44,7 +44,7 @@ func (api API) handleSubscriberAction(w http.ResponseWriter, r *http.Request) {
 	api.hub.subscriberAction(mode, topic, *callbackUrl, secret)
 }
 
-func (api API) handlePublish(w http.ResponseWriter, r *http.Request) {
+func (api API) handleNotifySubscribers(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		fmt.Fprintf(w, "Only the POST method is supported")
 	}
@@ -52,5 +52,5 @@ func (api API) handlePublish(w http.ResponseWriter, r *http.Request) {
 	topic := r.FormValue("hub.topic")
 	data := r.FormValue("data")
 
-	api.hub.publish(topic, data)
+	api.hub.notifySubscribers(topic, data)
 }
