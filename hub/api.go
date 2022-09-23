@@ -14,9 +14,7 @@ type API struct {
 }
 
 func NewAPI(hub Hub) *API {
-	api := API{hub: hub}
-
-	return &api
+	return &API{hub: hub}
 }
 
 func (api API) start() {
@@ -36,13 +34,14 @@ func (api API) handleSubscriberAction(w http.ResponseWriter, r *http.Request) {
 
 	mode := r.FormValue("hub.mode")
 	topic := r.FormValue("hub.topic")
+	secret := r.FormValue("hub.secret")
 	callbackUrl, err := url.Parse(r.FormValue("hub.callback"))
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	api.hub.subscriberAction(mode, topic, *callbackUrl)
+	api.hub.subscriberAction(mode, topic, *callbackUrl, secret)
 }
 
 func (api API) handlePublish(w http.ResponseWriter, r *http.Request) {

@@ -18,36 +18,34 @@ func NewHub() *Hub {
 	return &h
 }
 
-func (hub Hub) registerTopic(topic string) {
-	hub.topics[topic] = new(Topic)
+func (hub Hub) registerTopic(topicName string) {
+	hub.topics[topicName] = NewTopic()
+	print(hub.topics[topicName].subscribers)
 }
 
-func (hub Hub) subscriberAction(mode string, topic string, callback url.URL) {
-	if !hub.validateSubscription(mode, topic, callback) {
+func (hub Hub) subscriberAction(mode string, topicName string, callback url.URL, secret string) {
+	if !hub.validateSubscription(mode, topicName) {
 		return
 	}
-	if !verifyIntent(mode, topic, callback) {
+	if !verifyIntent(mode, topicName, callback) {
 		return
 	}
 
 	if mode == "subscribe" {
-		hub.subscribe(topic, callback)
+		hub.subscribe(topicName, callback, secret)
 	} else {
 		// TODO: call unsubscribe
 	}
 }
 
-func (hub Hub) validateSubscription(mode string, topic string, callback url.URL) bool {
+func (hub Hub) validateSubscription(mode string, topicName string) bool {
 	failureReason := ""
 
 	if mode != "subscribe" && mode != "unsubscribe" {
 		failureReason = "Mode must be set to either 'subscribe' or 'unsubscribe"
 	}
-	if _, topicExists := hub.topics[topic]; !topicExists {
+	if _, topicExists := hub.topics[topicName]; !topicExists {
 		failureReason = "The topic does not exist"
-	}
-	if mode == "unsubscribe" && contains(hub.topics[topic].subscribers, callback) {
-		failureReason = "The callback is not subscribed to the topic specified"
 	}
 
 	if failureReason != "" {
@@ -82,9 +80,9 @@ func verifyIntent(mode string, topic string, callback url.URL) bool {
 	return false
 }
 
-func (hub Hub) subscribe(topicName string, callbackURL url.URL) {
+func (hub Hub) subscribe(topicName string, callback url.URL, secret string) {
 	topic := hub.topics[topicName]
-	topic.subscribe(callbackURL)
+	topic.subscribe(callback, secret)
 }
 
 func (hub Hub) publish(topicName string, data string) {

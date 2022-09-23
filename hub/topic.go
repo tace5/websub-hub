@@ -10,20 +10,27 @@ import (
 
 type Topic struct {
 	mu          sync.Mutex
-	subscribers []url.URL
+	subscribers map[url.URL]string
 }
 
-func (topic *Topic) subscribe(callbackUrl url.URL) {
+func NewTopic() *Topic {
+	return &Topic{
+		mu:          sync.Mutex{},
+		subscribers: map[url.URL]string{},
+	}
+}
+
+func (topic *Topic) subscribe(callback url.URL, secret string) {
 	topic.mu.Lock()
 	defer topic.mu.Unlock()
-	topic.subscribers = append(topic.subscribers, callbackUrl)
+	topic.subscribers[callback] = secret
 }
 
 func (topic *Topic) publish(data []byte) {
 	buffer := bytes.NewBuffer(data)
-	
-	for _, cbUrl := range topic.subscribers {
-		_, err := http.Post(cbUrl.String(), "application/json", buffer)
+
+	for callback, _ := range topic.subscribers {
+		_, err := http.Post(callback.String(), "application/json", buffer)
 		if err != nil {
 			log.Print(err)
 		}
