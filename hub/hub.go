@@ -104,7 +104,7 @@ func (hub Hub) unsubscribe(topicName string, callback url.URL) {
 	topic.unsubscribe(callback)
 }
 
-// Notifies all subscribers of a topic
+// Notifies all subscribers of an update to a topic
 func (hub Hub) notifySubscribers(topicName string, data string) {
 	topic := hub.topics[topicName]
 	payload := map[string]string{"hub.topic": topicName, "data": data}
@@ -119,7 +119,7 @@ func (hub Hub) notifySubscribers(topicName string, data string) {
 	}
 }
 
-// Notifies a subscriber about changes to a topic
+// Notifies a single subscriber about changes to a topic
 func (hub Hub) notifySubscriber(callback url.URL, secret string, data []byte, topicName string) {
 	hash := hmac.New(sha512.New, []byte(secret))
 	hash.Write(data)
