@@ -11,7 +11,11 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"time"
 )
+
+// The lease time of a subscription
+const leaseSeconds = 900
 
 // Hub The type that represents the hub itself
 type Hub struct {
@@ -29,7 +33,6 @@ func NewHub() *Hub {
 // Registers a new topic
 func (hub Hub) registerTopic(topicName string) {
 	hub.topics[topicName] = NewTopic()
-	print(hub.topics[topicName].subscribers)
 }
 
 // Subscribes or unsubscribes a subscriber from a topic (Includes validation and verification of intent)
@@ -42,7 +45,8 @@ func (hub Hub) subscriberAction(mode string, topicName string, callback url.URL,
 	}
 
 	if mode == "subscribe" {
-		hub.subscribe(topicName, callback, secret)
+		subscriber := NewSubscriber(callback, secret, leaseSeconds)
+		hub.subscribe(topicName, *subscriber)
 	} else {
 		hub.unsubscribe(topicName, callback)
 	}
@@ -73,6 +77,7 @@ func verifyIntent(mode string, topic string, callback url.URL) bool {
 	params.Add("hub.mode", mode)
 	params.Add("hub.topic", topic)
 	params.Add("hub.challenge", challenge)
+	params.Add("hub.lease_seconds", string(rune(leaseSeconds)))
 
 	callback.RawQuery = params.Encode()
 	resp, err := http.Get(callback.String())
@@ -93,9 +98,9 @@ func verifyIntent(mode string, topic string, callback url.URL) bool {
 }
 
 // Subscribes a subscriber to a topic
-func (hub Hub) subscribe(topicName string, callback url.URL, secret string) {
+func (hub Hub) subscribe(topicName string, subscriber Subscriber) {
 	topic := hub.topics[topicName]
-	topic.subscribe(callback, secret)
+	topic.subscribe(subscriber)
 }
 
 // Unsubscribes a subscriber to a topic
@@ -114,19 +119,25 @@ func (hub Hub) notifySubscribers(topicName string, data string) {
 		log.Panic(err)
 	}
 
-	for callback, secret := range topic.subscribers {
-		hub.notifySubscriber(callback, secret, jsonData, topicName)
+	for _, subscriber := range topic.subscribers {
+		hub.notifySubscriber(subscriber, jsonData, topicName)
 	}
 }
 
 // Notifies a single subscriber about changes to a topic
-func (hub Hub) notifySubscriber(callback url.URL, secret string, data []byte, topicName string) {
-	hash := hmac.New(sha512.New, []byte(secret))
+func (hub Hub) notifySubscriber(subscriber Subscriber, data []byte, topicName string) {
+	if time.Now().After(subscriber.expirationTime) {
+		log.Print(subscriber.callback.String() + ": Subscription Expired")
+		hub.unsubscribe(topicName, subscriber.callback)
+		return
+	}
+
+	hash := hmac.New(sha512.New, []byte(subscriber.secret))
 	hash.Write(data)
 	signature := hex.EncodeToString(hash.Sum(nil))
 	buffer := bytes.NewBuffer(data)
 
-	req, err := http.NewRequest("POST", callback.String(), buffer)
+	req, err := http.NewRequest("POST", subscriber.callback.String(), buffer)
 	if err != nil {
 		log.Panic(err)
 	}
@@ -138,6 +149,6 @@ func (hub Hub) notifySubscriber(callback url.URL, secret string, data []byte, to
 	if err != nil {
 		log.Print(err)
 	} else if resp.StatusCode == http.StatusGone {
-		hub.unsubscribe(topicName, callback)
+		hub.unsubscribe(topicName, subscriber.callback)
 	}
 }

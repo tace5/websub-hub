@@ -40,6 +40,7 @@ func (api API) handleSubscriberAction(w http.ResponseWriter, r *http.Request) {
 	mode := r.FormValue("hub.mode")
 	topic := r.FormValue("hub.topic")
 	secret := r.FormValue("hub.secret")
+
 	callbackUrl, err := url.Parse(r.FormValue("hub.callback"))
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
