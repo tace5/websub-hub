@@ -19,6 +19,12 @@ func NewTopic() *Topic {
 	}
 }
 
+func (topic Topic) getSubscribers() map[string]Subscriber {
+	topic.mu.Lock()
+	defer topic.mu.Unlock()
+	return topic.subscribers
+}
+
 // Adds a callback url and the provided secret to the list of subscribers
 func (topic Topic) subscribe(subscriber Subscriber) {
 	topic.mu.Lock()
