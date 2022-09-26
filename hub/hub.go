@@ -20,7 +20,6 @@ const leaseSeconds = 900
 // Hub The type that represents the hub itself
 type Hub struct {
 	topics map[string]*Topic
-	client http.Client
 }
 
 // NewHub Factory function for the hub
@@ -145,7 +144,7 @@ func (hub Hub) notifySubscriber(subscriber Subscriber, data []byte, topicName st
 	req.Header.Add("Link", fmt.Sprintf("http://hub:8080; rel=hub, %s; rel=self", topicName))
 	req.Header.Add("X-Hub-Signature", "sha512="+signature)
 
-	resp, err := hub.client.Do(req)
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		log.Print(err)
 	} else if resp.StatusCode == http.StatusGone {
