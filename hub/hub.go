@@ -119,7 +119,7 @@ func (hub Hub) notifySubscribers(topicName string, data string) {
 		log.Panic(err)
 	}
 
-	for _, subscriber := range topic.subscribers {
+	for _, subscriber := range topic.getSubscribers() {
 		hub.notifySubscriber(subscriber, jsonData, topicName)
 	}
 }
